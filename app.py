@@ -111,23 +111,14 @@ def update_announcements():
         """
         #CURRENT_TIMESTAMP is a keyword in SQL that automatically inputs the time
     cursor.execute(query, (new_text, editor)) #dont forget to pass on the variables for ?
-    
+    log_history(db, editor, 'announcement') #using the previously made function to update history page's data
+
     #UPDATE, SET requires a commit to save!
     db.commit()
     db.close()
 
-    return redirect("/announcements")
+    return redirect("/announcements") #use redirect here to refresh the page
 
-
-@app.route("/calendar")
-def calendar():
-
-    return render_template("calendar.html")
-
-@app.route("/clubs")
-def clubs():
-
-    return render_template("clubs.html")
 
 @app.route("/qa", methods=["GET"])
 def qa():
@@ -154,7 +145,7 @@ def submit_question():
         INSERT INTO qa (q_text, askedTime, page, is_visible)
         VALUES (?, CURRENT_TIMESTAMP, 'qa', 0)
     """ #in sql, INSERT & VALUES work tgt to create a new record 
-    cursor.execute(query, (question))
+    cursor.execute(query, (question)).fetchall()
     db.commit()
     db.close()
 
@@ -177,7 +168,8 @@ def answer_question():
         UPDATE qa
         SET a_text = ?, id = ?, updateDatetime = CURRENT_TIMESTAMP, is_visible = ? WHERE qa_id = ?
     """ #now we update those empty columns of "a_text"
-    cursor.execute(query, (answer, editor, visibility, question_id))
+    cursor.execute(query, (answer, editor, visibility, question_id)).fetchall()
+    log_history(db, editor, 'qa')
     db.commit()
     db.close()
     return redirect("/qa")
@@ -190,6 +182,95 @@ def resources():
     rows = cursor.execute("SELECT label, url FROM resources").fetchall() #we want all the listed links
     db.close()
     return render_template("resources.html", resource_list=rows)
+
+
+@app.route("/clubs")
+def clubs():
+    db = get_db_conn()
+    cursor = db.cursor()
+    query = """
+        SELECT club_name, description, image_path, updateDatetime, id FROM clubs ORDER BY updateDatetime DESC
+    """
+    club_list = cursor.execute(query).fetchall()
+    db.close()
+    return render_template("clubs.html", club_list=club_list)
+
+@app.route("/update_clubs", methods=["POST"])
+def update_clubs():
+    if not can_edit():
+        return redirect("/login")
+        
+    edited_id = request.form.get("club_id")
+    new_descp = request.form.get("updated_club")
+    if not new img:
+        new_img = request.form.get("new_img_link")
+    editor = session.get('user_id')
+    db = get_db_conn()
+    cursor = db.cursor()
+    query = """
+        UPDATE clubs
+        SET description = ?, image_path = ?, id = ?, updateDatetime = CURRENT_TIMESTAMP WHERE club_id = ?
+    """
+    cursor.execute(query, (new_descp, new_img, editor, edited_id))
+    log_history(db, editor, 'clubs')
+    db.commit()
+    db.close()
+    return redirect("/clubs")
+
+
+@app.route("/calendar")
+def calendar():
+    db = get_db_conn()
+    cursor = db.cursor()
+    query = """
+        SELECT eventdate, description, category FROM calendar ORDER BY eventdate ASC
+    """
+    all_events = cursor.execute(query).fetchall()
+    db.close()
+    return render_template("calendar.html", display_events=all_events)
+
+@app.route("/update_calendar") #this is the route where teachers can update calendar
+def update_calendar():
+    if not can_edit():
+        return redirect("/login")
+    date = request.form.get("eventdate")
+    new_text = request.form.get("description")
+    category = request.form.get("category")
+    editor = session.get("user_id")
+
+    db = get_db_conn()
+    cursor = db.cursor()
+    #the next line checks if this day already has info, if so then we just update
+    existing = cursor.execute("SELECT 1 FROM calendar WHERE eventdate = ?", (date_id)).fetchone()
+    if existing: #means YES, this eventdate has already been inserted and is not empty
+        cursor.execute("""
+            UPDATE calendar
+            SET description = ?, id = ?, category = ?, updateDatetime = CURRENT_TIMESTAMP WHERE eventdate = ?
+        """, (new_text, editor, category)
+        )
+    else: #means NO, this event was empty, first time adding content
+        cursor.execute("""
+            INSERT INTO calendar (eventdate, description, category, id, updateDatetime)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """, (date, new_text, category, editor)
+        )
+    
+    log_history(db, editor, 'calendar')
+    db.commit()
+    db.close()
+    return redirect("/calendar")
+
+
+@app.route("/history")
+def history():
+    if session.get("role") != "admin": #here we are ensuring that nobody other than admins are allowed to this page
+        return redirect("/login")
+    db = get_db_conn()
+    cursor = db.cursor()
+    all_logs = cursor.execute("""SELECT * FROM history ORDER BY updateDatetime DESC""").fetchall()
+    
+    db.close()
+    return render_template("history.html", display_logs=all_logs)
 
 
 if __name__ == "__main__":
