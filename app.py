@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, secrets, string
 import sqlite3
 
 app = Flask(__name__)
@@ -9,6 +9,14 @@ def get_db_conn(): #whenever I need to connect to db, I can just call this funct
     conn = sqlite3.connect('database.db') #connect to the db file
     conn.row_factory = sqlite3.Row #row factory allows named access
     return conn
+
+#I can just call this function inside every editable page
+def can_edit(): #making sure students are not typing /admin to access things; for security too!
+    is_active = session.get("is_active")
+    if is_active == 0: #if this account was disabled, they cannot have access
+        return False
+    return "user_id" in session and session.get("role") in ["teacher", "admin"] 
+    #checks their "wristband" and see if they qualify to edit and account is active
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -22,12 +30,13 @@ def login():
         cursor = db.cursor() #create a cursor to do the sql handling
         cursor.execute("SELECT * FROM teachers where email=? AND password=?" (email, password))
         user = cursor.fetchone() 
-        if user:
+        if user and user["is_active"] == 1:
             #if teacher is found, save their info in session and direct them to the home page
             #sessions help keep track who is logged in when they navigate through diff pages, ITS A DICTIONARY!
             session["user_id"] = user["id"] #instead of keeping EVERYTHING from that row, we just keep "id"
             #the left side is like the "wristband" telling python who is logged in; the right side
             session["role"] = user["role"] #keeping track of admins/teachers
+            session["is_active"] = user["is_active"]
             return redirect("/") #use redirect for URL that isn't HTML
         else:
             #if NOT found, bring them to the login page again with an error
@@ -45,11 +54,6 @@ def login():
 def logout():
     session.clear() #using the .clear() function to wipe the session clean
     return render_template("/") #bring them back to "view only"
-
-#I can just call this function inside every editable page
-def can_edit(): #making sure students are not typing /admin to access things; for security too!
-    return "user_id" in session and session.get("role") in ["teacher", "admin"] 
-    #checks their "wristband" and see if they qualify to edit
 
 
 @app.route("/")
@@ -229,7 +233,7 @@ def calendar():
     db.close()
     return render_template("calendar.html", display_events=all_events)
 
-@app.route("/update_calendar") #this is the route where teachers can update calendar
+@app.route("/update_calendar", methods=["POST"]) #this is the route where teachers can update calendar
 def update_calendar():
     if not can_edit():
         return redirect("/login")
@@ -263,7 +267,7 @@ def update_calendar():
 
 @app.route("/history")
 def history():
-    if session.get("role") != "admin": #here we are ensuring that nobody other than admins are allowed to this page
+    if session.get("role") != "admin": #here we are ensuring that nobody other than admins are allowed to see this page
         return redirect("/login")
     db = get_db_conn()
     cursor = db.cursor()
@@ -271,6 +275,74 @@ def history():
     
     db.close()
     return render_template("history.html", display_logs=all_logs)
+
+@app.route("/management")
+def management():
+    if session.get("role") != "admin": 
+        return redirect("/login")
+    db = get_db_conn()
+    cursor = db.cursor()
+    all_accounts = cursor.execute("""SELECT id, email, role, is_active FROM teachers ORDER BY id""").fetchall()
+    
+    db.close()
+    return render_template("management.html", all_accounts=all_accounts)
+
+@app.route("/manage_accounts", methods=["POST"])
+def manage_accounts():
+    if session.get("role") != "admin": 
+        return redirect("/login")
+    
+    editor = session.get("user_id")
+    target_email = request.form.get("target_email") #know which account is being edited
+    action = request.form.get("action") #know what action is being done to this account
+    db = get_db_conn()
+    cursor = db.cursor()
+    row = cursor.execute("""SELECT id FROM teachers WHERE email = ? """, (target_email)).fetchone()
+    temp_id = row[0] #we fetched the row of data above, but we want numbers
+
+    if action == "disable": #disabling the account
+        cursor.execute(""" 
+            UPDATE teachers 
+            SET is_active = 0 WHERE id = ?
+        """, temp_id)
+
+    elif action == "remove": #removing accounts, deletes the whole row, that id is gone forever, and is not replaced
+        cursor.execute("""
+            DELETE teachers WHERE id = ?
+        """, (temp_id))
+        db.commit()
+        db.close()
+        return redirect("/management?deleted=success") 
+        #everything after the ? will be sent to html, tell em it was successful!
+
+    elif action == "reset": #resetting password 
+        alphabet = string.ascii_letters + string.digits
+        new_pass = ''.join(secrets.choice(alphabet) for i in range(8))
+        #the two lines above help create a random string that is 8 characters long
+        cursor.execute("""
+            UPDATE teachers
+            SET password = ? WHERE id = ?
+        """, new_pass, temp_id)
+        db.commit()
+        db.close()
+        return redirect(f"/management?new_password={new_pass}") 
+        #first refresh to the page, the "?" starts a query string to send the data
+
+    else: #this case is when the action is to change role to 'teacher' or 'admin'
+        cursor.execute("""
+            UPDATE teachers
+            SET role = ? WHERE id = ?
+        """, (action, temp_id))
+
+    log_history(db, editor, 'manage_accounts')
+    db.commit()
+    db.close()
+    return redirect("/management")
+
+
+
+
+
 
 
 if __name__ == "__main__":

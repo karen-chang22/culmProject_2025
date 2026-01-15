@@ -37,6 +37,7 @@ cursor.execute ('''
 cursor.execute ('''
     CREATE TABLE IF NOT EXISTS clubs(
     club_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    club_name TEXT,
     description TEXT,
     image_path TEXT,
     updateDatetime TEXT,
@@ -55,7 +56,8 @@ cursor.execute ('''
 #CALENDAR TABLE
 cursor.execute ('''
     CREATE TABLE IF NOT EXISTS calendar(
-    eventdate TEXT PRIMARY KEY,
+    event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    eventdate TEXT UNIQUE,
     description TEXT,
     updateDatetime TEXT,
     id INTEGER,
