@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Accounts{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto mt-6 px-4">
+
+    {% if request.args.get('deleted') == 'success' %}
+    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded shadow-md flex justify-between items-center animate-bounce">
+        <p class="font-bold"><i class="fa fa-trash mr-2"></i> Account deleted successfully!</p>
+        <button onclick="this.parentElement.remove()" class="text-red-900 font-bold">&times;</button>
+    </div>
+    {% endif %}
+
+    {% if request.args.get('new_password') %}
+    <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6 rounded shadow-md">
+        <p class="font-bold underline mb-1 text-sm uppercase tracking-widest">New Password Generated:</p>
+        <div class="flex items-center justify-between">
+            <span class="text-2xl font-mono font-black tracking-widest">{{ request.args.get('new_password') }}</span>
+            <p class="text-xs italic">Please copy this now, it won't be shown again!</p>
+        </div>
+    </div>
+    {% endif %}
+<div class="max-w-5xl mx-auto mt-10 px-4">
+    <div class="flex justify-between items-end mb-6">
+        <div>
+            <h2 class="text-4xl font-bold text-[#004a99] mb-8 border-b-4 border-[#5bc2f2] inline-block pb-2">
+            Manage Accounts</h2>
+        </div>
+        <button onclick="document.getElementById('addModal').classList.remove('hidden')" 
+                class="bg-green-500 hover:bg-green-600 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110">
+            <i class="fa fa-plus text-2xl"></i>
+        </button>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 mb-4">
+        <div class="bg-[#7dd3fc] py-4 rounded-lg text-center font-bold text-xl text-[#004a99] shadow-sm">
+            Email/Username
+        </div>
+        <div class="bg-[#7dd3fc] py-4 rounded-lg text-center font-bold text-xl text-[#004a99] shadow-sm">
+            Access/Reset Password
+        </div>
+    </div>
+
+    <div class="space-y-3">
+        {% for account in all_accounts %}
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-[#e0f2fe] py-4 rounded-lg text-center font-semibold text-lg text-[#0369a1] shadow-sm flex items-center justify-center">
+                {{ account['email'] }}
+            </div>
+
+            <div class="relative group bg-[#e0f2fe] rounded-lg shadow-sm">
+                <div class="py-4 px-6 flex justify-between items-center cursor-pointer">
+                    <span class="font-semibold text-lg text-[#0369a1]">
+                        {% if account['is_active'] == 0 %}Disabled{% else %}{{ account['role']|capitalize }}{% endif %}
+                    </span>
+                    <i class="fa fa-chevron-down text-[#0369a1] group-hover:rotate-180 transition-transform"></i>
+                </div>
+
+                <div class="hidden group-hover:block absolute w-full bg-white border-2 border-[#7dd3fc] rounded-b-lg shadow-2xl z-20 overflow-hidden">
+                    <form action="/manage_accounts" method="POST">
+                        <input type="hidden" name="target_email" value="{{ account['email'] }}">
+                        
+                        <button name="action" value="reset" class="w-full text-left px-6 py-3 hover:bg-blue-50 text-gray-700 font-bold border-b border-gray-100">
+                            <i class="fa fa-key mr-2 text-orange-400"></i> Reset Password
+                        </button>
+                        
+                        <button name="action" value="set_admin" class="w-full text-left px-6 py-3 hover:bg-blue-50 text-gray-700 font-bold border-b border-gray-100">
+                            <i class="fa fa-user-shield mr-2 text-purple-500"></i> Make Admin
+                        </button>
+
+                        <button name="action" value="set_teacher" class="w-full text-left px-6 py-3 hover:bg-blue-50 text-gray-700 font-bold border-b border-gray-100">
+                            <i class="fa fa-chalkboard-teacher mr-2 text-blue-500"></i> Make Teacher
+                        </button>
+
+                        <button name="action" value="disable" class="w-full text-left px-6 py-3 hover:bg-blue-50 text-gray-700 font-bold border-b border-gray-100">
+                            <i class="fa fa-ban mr-2 text-red-400"></i> Disable Account
+                        </button>
+
+                        <button name="action" value="remove" onclick="return confirm('Remove user forever?')" 
+                                class="w-full text-left px-6 py-3 hover:bg-red-50 text-red-600 font-black">
+                            <i class="fa fa-trash-alt mr-2"></i> REMOVE USER
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div id="addModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+    <div class="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl">
+        <h3 class="text-2xl font-bold text-[#004a99] mb-6">Create New Account</h3>
+        <form action="/add_account" method="POST" class="space-y-4">
+            <input type="text" name="email" placeholder="Username/Email" required class="w-full p-3 border-2 border-gray-100 rounded-xl">
+            <input type="password" name="password" placeholder="Initial Password" required class="w-full p-3 border-2 border-gray-100 rounded-xl">
+            <select name="role" class="w-full p-3 border-2 border-gray-100 rounded-xl">
+                <option value="teacher">Teacher</option>
+                <option value="admin">Admin</option>
+            </select>
+            <div class="flex space-x-3 pt-4">
+                <button type="button" onclick="document.getElementById('addModal').classList.add('hidden')" class="flex-1 py-3 bg-gray-100 rounded-xl font-bold">Cancel</button>
+                <button type="submit" class="flex-1 py-3 bg-[#004a99] text-white rounded-xl font-bold">Create</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="w-full max-w-none px-6 py-10 overflow-x-hidden">
+    <div class="flex flex-col lg:flex-row gap-6 items-start">
+
+        <div
+            class="w-full lg:w-1/5 border-4 border-[#004a99] rounded-[3rem] p-10 bg-white shadow-lg min-h-[600px] flex flex-col">
+            <h3 id="panel-date" class="text-4xl font-bold mb-6 text-[#004a99] border-b-2 pb-2">Select Date</h3>
+
+            <div id="panel-content" class="flex-grow">
+                <p class="italic text-gray-400 text-2xl">• Click a day to see details</p>
+            </div>
+
+            {% if session.get('role') in ['admin', 'teacher'] %}
+            <form id="sidebar-auto-form" action="/update_calendar" method="POST" style="display:none;">
+                <input type="hidden" name="eventdate" id="hid-date">
+                <input type="hidden" name="notes" id="hid-notes"> <input type="hidden" name="description" id="hid-desc">
+                <input type="hidden" name="category" id="hid-cat">
+            </form>
+            <button id="save-btn" type="button" onclick="saveSidebar()"
+                class="hidden w-full mt-4 bg-[#004a99] text-white font-bold py-2 rounded-xl hover:bg-[#5bc2f2]">
+                Save Changes
+            </button>
+            {% endif %}
+        </div>
+
+        <div class="flex-grow bg-white border-4 border-[#004a99] rounded-[3rem] p-8 shadow-xl">
+            <div class="flex justify-between items-center mb-2 px-6">
+                <a href="/calendar?month={{ 12 if month==1 else month-1 }}&year={{ year-1 if month==1 else year }}"
+                    class="text-8xl font-light hover:text-[#5bc2f2] transition-transform hover:scale-110">&lt;</a>
+
+                <h3 class="text-6xl font-bold text-gray-800 tracking-tight">{{ month_name }} {{ year }}</h3>
+
+                <a href="/calendar?month={{ 1 if month==12 else month+1 }}&year={{ year+1 if month==12 else year }}"
+                    class="text-8xl font-light hover:text-[#5bc2f2] transition-transform hover:scale-110">&gt;</a>
+            </div>
+
+            <div class="grid grid-cols-7 border-2 border-[#004a99] rounded-2xl overflow-hidden w-full">
+                {% for d in ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] %}
+                <div
+                    class="p-6 border border-[#004a99] text-center font-bold bg-[#004a99] text-white text-2xl uppercase tracking-widest">
+                    {{ d }}</div>
+                {% endfor %}
+
+                {% for week in grid %}
+                {% for day in week %}
+                {% set d_str = "%04d-%02d-%02d"|format(year, month, day) %}
+                {% set day_data = display_events | selectattr(0, 'equalto', d_str) | first %}
+                {% set is_today = (d_str == today) %}
+
+                <div class="h-32 p-4 border border-[#004a99] transition-all
+        {{ 'bg-gray-100 opacity-20' if day == 0 else '' }}
+        {% if is_today %}
+            bg-[#5bc2f2]/65 ring-4 ring-inset ring-[#5bc2f2]/40
+        {% elif day_data and day_data[2] == 'holiday' %}
+        bg-[#dfc4ee]
+        {% elif day_data and day_data[2] == 'snowday' %}
+            bg-[#AFEEEE]
+        {% endif %}
+        hover:bg-blue-50 cursor-pointer" {% if day !=0 %}
+                    onclick="updatePanel('{{ month_name }} {{ day }}', '{{ d_str }}')" {% endif %}>
+
+                    {% if day != 0 %}
+                    <div class="flex flex-col h-full">
+                        <div class="flex justify-between items-start">
+                            <span class="text-2xl font-black {{ 'text-white' if is_today else 'text-gray-700' }}">
+                                {{ day }}
+                            </span>
+
+                            {% if is_today %}
+                            <span class="text-[10px] font-bold uppercase tracking-tighter text-white">Today</span>
+                            {% endif %}
+                        </div>
+
+                        {% if day_data and day_data[3] %}
+                        <p
+                            class="text-[11px] font-bold leading-tight mt-1 uppercase truncate {{ 'text-white' if is_today else 'text-[#004a99]' }}">
+                            {{ day_data[3] }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const allEvents = {{ display_events | tojson }};
+
+    function updatePanel(dateText, dateKey) {
+    // 1. Update the Header Date
+    document.getElementById('panel-date').innerText = dateText;
+    
+    // 2. Try to find the hidden date input (only exists for teachers)
+    const hidDate = document.getElementById('hid-date');
+    if (hidDate) hidDate.value = dateKey;
+
+    // 3. Show the Save button (only exists for teachers)
+    const saveBtn = document.getElementById('save-btn');
+    if (saveBtn) saveBtn.classList.remove('hidden');
+
+    // 4. Find the event data
+    const day = allEvents.find(e => e[0] === dateKey) || [dateKey, "", "regular", ""];
+
+    // 5. Check if the user is a teacher (by seeing if the hidden form exists)
+    const isTeacher = !!document.getElementById('sidebar-auto-form');
+
+    let html = "";
+    if (isTeacher) {
+        // TEACHER MODE: Show the inputs you already had
+        html = `
+        <div class="space-y-6">
+            <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Grid Label</label>
+                <input type="text" id="live-notes" value="${day[3] || ''}" class="w-full p-2 bg-gray-50 border-2 border-transparent focus:border-[#5bc2f2] rounded-xl text-lg font-bold text-[#004a99]">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Daily Notes</label>
+                <textarea id="live-desc" class="w-full h-80 bg-transparent border-none focus:ring-0 text-2xl text-gray-800 leading-relaxed resize-none">${day[1] || ''}</textarea>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Color Category</label>
+                <select id="live-cat" class="w-full p-2 rounded-lg bg-gray-50 border border-transparent text-xs text-gray-700">
+                    <option value="regular" ${day[2] === 'regular' ? 'selected' : ''}>Normal</option>
+                    <option value="holiday" ${day[2] === 'holiday' ? 'selected' : ''}>Holiday (Purple)</option>
+                    <option value="snowday" ${day[2] === 'snowday' ? 'selected' : ''}>Snow Day (Turquoise)</option>
+                </select>
+            </div>
+        </div>`;
+    } else {
+        // VIEWER MODE: Just show the text nicely
+        html = `
+        <div class="space-y-6">
+            <h4 class="text-3xl font-bold text-[#004a99]">${day[3] || 'Regular Day'}</h4>
+            <p class="text-2xl text-gray-800 leading-relaxed whitespace-pre-wrap">${day[1] || 'No extra details for today.'}</p>
+        </div>`;
+    }
+    
+    document.getElementById('panel-content').innerHTML = html;
+}
+
+    function saveSidebar() {
+        const notes = document.getElementById('live-notes').value;
+        const desc = document.getElementById('live-desc').value;
+        const cat = document.getElementById('live-cat').value;
+
+        // Populate hidden form and submit
+        document.getElementById('hid-notes').value = notes;
+        document.getElementById('hid-desc').value = desc;
+        document.getElementById('hid-cat').value = cat;
+        document.getElementById('sidebar-auto-form').submit();
+    }
+</script>
+{% endblock %}

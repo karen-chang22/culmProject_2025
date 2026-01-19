@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-10">
+    <div class="mb-12 border-b-4 border-[#5bc2f2] inline-block pb-2">
+        <h2 class="text-4xl font-bold text-[#004a99]">Clubs</h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+        {% for club in club_list %}
+        <div
+            class="border-4 border-[#004a99] rounded-[2.5rem] bg-white shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow">
+
+            <div class="h-52 overflow-hidden border-b-4 border-[#004a99]">
+                {% if club[2] %}
+                <img src="{{ club[2] }}" class="w-full h-full object-cover" alt="{{ club[0] }}">
+                {% else %}
+                <div class="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">
+                    <i class="fa fa-users text-4xl"></i>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="p-8 flex-grow">
+                <h3 class="text-2xl font-bold text-[#004a99] mb-4">{{ club[0] }}</h3>
+                <p class="text-gray-600 leading-relaxed">{{ club[1] }}</p>
+            </div>
+
+            {% if session.get('role') == 'admin' or session['role'] == 'teacher' %}
+            <div class="p-6 bg-gray-50 border-t-2 border-gray-100">
+                <form action="/update_clubs" method="POST" class="space-y-3">
+                    <input type="hidden" name="club_id" value="{{ club[3] }}">
+
+                    <div class="text-left">
+                        <label class="block text-[10px] font-bold text-[#004a99] mb-1 uppercase tracking-widest">Club
+                            Name</label>
+                        <input type="text" name="updated_name" value="{{ club[0] }}"
+                            class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm font-bold text-[#004a99] focus:border-[#5bc2f2] outline-none"
+                            placeholder="Club Name">
+                    </div>
+
+                    <div class="text-left">
+                        <label
+                            class="block text-[10px] font-bold text-[#004a99] mb-1 uppercase tracking-widest">Description</label>
+                        <textarea name="updated_club"
+                            class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm focus:border-[#5bc2f2] outline-none"
+                            rows="3">{{ club[1] }}</textarea>
+                    </div>
+
+                    <input type="text" name="new_img_link"
+                        class="w-full p-2 border-2 border-gray-200 rounded-lg text-xs"
+                        placeholder="New Image URL (optional)">
+
+                    <button type="submit"
+                        class="w-full bg-[#004a99] text-white py-2 rounded-full font-bold hover:bg-[#5bc2f2] transition-colors shadow-md">
+                        Update Club
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

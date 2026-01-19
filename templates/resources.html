@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-10">
+    <h2 class="text-4xl font-bold text-[#004a99] mb-8 border-b-4 border-[#5bc2f2] inline-block pb-2">
+        School Resources
+    </h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {% for row in resource_list %}
+        <div class="flex flex-col border-4 border-[#004a99] rounded-[2.5rem] p-8 bg-white shadow-md">
+            <h3 class="text-2xl font-bold mb-6 text-gray-800">{{ row[0] }}</h3>
+            
+            <div class="mt-auto">
+                <a href="{{ row[1] }}" target="_blank" 
+                   class="inline-block bg-[#004a99] text-white px-8 py-3 rounded-full font-bold hover:bg-[#5bc2f2] transition-all text-center w-full">
+                    Visit Resource
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
