@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto mt-12 px-6 pb-20">
+
+    <div class="flex justify-between items-end mb-12">
+        <div>
+            <h2 class="text-4xl font-bold text-[#004a99] mb-8 border-b-4 border-[#5bc2f2] inline-block pb-2">
+            Edit History</h2>
+        </div>
+
+        <div class="flex gap-4">
+            <form action="/clear_history" method="POST"
+                onsubmit="return confirm('PERMANENTLY DELETE ALL LOGS? This cannot be undone.')">
+                <button type="submit"
+                    class="bg-red-500 hover:bg-red-700 text-white px-6 py-3 rounded-2xl font-bold transition-all shadow-lg active:scale-95">
+                    <i class="fa fa-trash-alt mr-2"></i> Clear All Logs
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-4 mb-4">
+        <div class="bg-[#cbd5e1] py-6 rounded-lg text-center font-bold text-2xl text-gray-800 shadow-sm">
+            Date
+        </div>
+        <div class="bg-[#cbd5e1] py-6 rounded-lg text-center font-bold text-2xl text-gray-800 shadow-sm">
+            Username/Email
+        </div>
+        <div class="bg-[#cbd5e1] py-6 rounded-lg text-center font-bold text-2xl text-gray-800 shadow-sm">
+            Page/Action
+        </div>
+    </div>
+
+    <div class="space-y-3">
+        {% for log in display_logs %}
+        <div class="grid grid-cols-3 gap-4">
+
+            <div
+                class="bg-[#eff6ff] py-8 rounded-lg text-center font-medium text-xl text-gray-700 shadow-sm flex items-center justify-center px-4">
+                {{ log['updateDatetime'] }}
+            </div>
+
+            <div
+                class="bg-[#eff6ff] py-8 rounded-lg text-center font-medium text-xl text-gray-700 shadow-sm flex items-center justify-center px-4">
+                {{ log['email'] }}
+            </div>
+
+            <div
+                class="bg-[#eff6ff] py-8 rounded-lg text-center font-medium text-xl text-gray-700 shadow-sm flex items-center justify-center px-4">
+                {{ log['page'] }}
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
