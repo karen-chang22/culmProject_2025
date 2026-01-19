@@ -105,7 +105,7 @@ def announcements():
     cursor = db.cursor()
     content = cursor.execute("SELECT description FROM announcement").fetchone() #bc theres only 1 row for announcement table, it's updated daily
     if content:
-        return render_template("announcements.html", daily_msg=content['description'], today=today_str) #bc its a dict, i must specify the column
+        return render_template("announcements.html", daily_msg=content['description'], today=today_str) #bc its a dict, must specify the column
     else:
         return render_template("announcements.html", daily_msg="", today=today_str)
 
@@ -134,7 +134,7 @@ def update_announcements():
     db.commit()
     db.close()
 
-    return redirect("/announcements") #use redirect here to refresh the page
+    return redirect("/announcements") #use redirect here to refresh the page, often for POST
 
 
 @app.route("/qa", methods=["GET"])
@@ -152,29 +152,29 @@ def qa():
     everything = cursor.execute(query).fetchall()
     db.close()
 
-    return render_template("qa.html", questions=everything)
+    return render_template("qa.html", questions=everything) #the only possible way to send variables to html
 
 
 @app.route("/submit_question", methods=["POST"])
-def submit_question():
+def submit_question(): #this function is for viewers to submit questions
     db = get_db_conn()
     cursor = db.cursor()
     content = request.form.get("question_content")
     asked_time = get_canada_time()
-    if not content: 
+    if not content: #if its empty, so nothing crashes
         return redirect("/qa")
     query = """
         INSERT INTO qa (q_text, askedTime, is_visible)
         VALUES (?, ?, ?)
     """
-    cursor.execute(query, (content, asked_time, 0))
+    cursor.execute(query, (content, asked_time, 0)) #set it to be invisibe before staff checks it
     db.commit()
     db.close()
     return redirect("/qa?submitted=true")
 
 
 @app.route("/answer_question", methods=["POST"])
-def answer_question():
+def answer_question(): #where staff can answer/review questions asked
     if not can_edit():
         return redirect("/login")
     
@@ -197,7 +197,7 @@ def answer_question():
     return redirect("/qa")
 
 @app.route("/delete_question", methods=["POST"])
-def delete_question():
+def delete_question(): #when staff wants to delete a question
     if not can_edit():
         return redirect("/login")
         
@@ -214,7 +214,7 @@ def delete_question():
 
 
 @app.route("/resources")
-def resources():
+def resources(): #just displaying the links to the resources, links have been hard coded into db
     db = get_db_conn()
     cursor = db.cursor()
     rows = cursor.execute("SELECT label, url FROM resources").fetchall() #we want all the listed links
@@ -223,7 +223,7 @@ def resources():
 
 
 @app.route("/clubs")
-def clubs():
+def clubs(): #GET view for clubs page
     db = get_db_conn()
     cursor = db.cursor()
     query = """
@@ -234,7 +234,7 @@ def clubs():
     return render_template("clubs.html", club_list=club_list)
 
 @app.route("/update_clubs", methods=["POST"])
-def update_clubs():
+def update_clubs(): #where staff can edit pre-exisitng clubs
     if not can_edit():
         return redirect("/login")
         
@@ -249,7 +249,7 @@ def update_clubs():
     current = cursor.execute("SELECT club_name, image_path FROM clubs WHERE club_id = ?", (edited_id,)).fetchone()
     if not new_name and current: #just use the old name from db if not given a new name
         new_name = current["club_name"]
-    if not new_img: 
+    if not new_img: #since they might not want to update the image everytime, prevent crashing if its empty
         if current and current["image_path"]:
             new_img = current["image_path"] # Keep old image if it exists
         else:
@@ -265,7 +265,7 @@ def update_clubs():
     return redirect("/clubs")
 
 @app.route("/add_clubs", methods=["POST"])
-def add_clubs():
+def add_clubs(): #function where staff can add new clubs
     if not can_edit():
         return redirect("/login")
     club_name = request.form.get("club_name")
@@ -273,7 +273,7 @@ def add_clubs():
     img = request.form.get("img_link")
     editor = session.get('user_id')
     time = get_canada_time()
-    if not img or img=="None":
+    if not img or img=="None": #image is optional, this statement prevents crashing if its empty
         img = ""
     db = get_db_conn()
     cursor = db.cursor()
@@ -281,18 +281,18 @@ def add_clubs():
         INSERT INTO clubs (club_name, image_path, description, updateDatetime, id, page)
         VALUES (?, ?, ?, ?, ?, ?)
     """, (club_name, img, description, time, editor, 'clubs'))
-    log_history(db, editor, "added new club")
+    log_history(db, editor, f"added new club: {club_name}")
     db.commit()
     db.close()
     return redirect("/clubs")
 
 @app.route("/delete_club", methods=["POST"])
-def delete_club():
+def delete_club(): #function to delete clubs
     if not can_edit():
         return redirect("/login")
         
     club_id = request.form.get("club_id")
-    club_name = request.form.get("club_name") # Sent for the history log
+    club_name = request.form.get("club_name") #sent for the history log
     editor = session.get('user_id')
     
     db = get_db_conn()
@@ -307,30 +307,30 @@ def delete_club():
 def calendar_view():
     canada_tz = pytz.timezone('America/Toronto') #changing time zone
     now = datetime.now(canada_tz)
-    if now.month >= 8:
+    if now.month >= 8: #to find which half of the school year we are in (eg: October is in the first half: 2025)
         start_year = now.year
     else:
-        start_year = now.year - 1
+        start_year = now.year - 1 #(eg: March would be 2026)
     #first get the current month 
     month = int(request.args.get('month', now.month))
     year = int(request.args.get('year', now.year))
     today_str = now.strftime("%Y-%m-%d") #get tdy's date to colour code it in the calendar.html
     #now restrict them: allows only Sept to June
     if year < start_year or (year == start_year and month < 9):
-        month, year = 9, start_year
+        month, year = 9, start_year #restricts them so the calendar stays within the lower school year range: sept
     elif year > start_year + 1 or (year == start_year + 1 and month > 6):
-        month, year = 6, start_year + 1
+        month, year = 6, start_year + 1 #restricts the upper year range: june
     db = get_db_conn()
     cursor = db.cursor()
     #so we are only fetching the current month's data
-    date_filter = f"{year}-{month:02d}-%"
+    date_filter = f"{year}-{month:02d}-%" #the % helps restrict the search to just the specific month in that year
     rows = cursor.execute("SELECT eventdate, description, category, notes FROM calendar WHERE eventdate LIKE ?", (date_filter,)).fetchall()
     clean_events = [list(row) for row in rows] #converting to a list of lists to prevent tojson from crashing
     calendar.setfirstweekday(calendar.SUNDAY)
     grid = calendar.monthcalendar(year, month) #build the calendar grid
     month_name = calendar.month_name[month]
     db.close()
-    return render_template("calendar.html", 
+    return render_template("calendar.html", #passing all the variables to html
                            display_events=clean_events, 
                            grid=grid, 
                            month_name=month_name, 
@@ -345,8 +345,8 @@ def update_calendar():
     canada_tz = pytz.timezone('America/Toronto')
     now_canada = datetime.now(canada_tz).strftime('%Y-%m-%d %H:%M:%S')
     date = request.form.get("eventdate")
-    new_text = request.form.get("description", "")
-    category = request.form.get("category") or "regular"
+    new_text = request.form.get("description", "") #if empty, its automatically = ""
+    category = request.form.get("category") or "regular" #note: i have removed the type constraint on 'category'
     editor = session.get("user_id")
     notes = request.form.get("notes", "")
     try: 
@@ -377,7 +377,8 @@ def update_calendar():
         if db:
             db.close() #closes no matter what
 
-    return redirect(f"/calendar?month={date[5:7]}&year={date[0:4]}")
+    return redirect(f"/calendar?month={date[5:7]}&year={date[0:4]}") 
+    #uses slicing mechanism to bring viewers back to the page they were on
 
 
 @app.route("/history")
@@ -385,7 +386,7 @@ def history():
     if session.get("role") != "admin": #here we are ensuring that nobody other than admins are allowed to see this page
         return redirect("/login")
     db = get_db_conn()
-    db.row_factory = sqlite3.Row
+    db.row_factory = sqlite3.Row #allows access to data using column names than index
     cursor = db.cursor()
     query = """
         SELECT teachers.email, history.updateDatetime, history.page FROM history
@@ -398,14 +399,14 @@ def history():
     return render_template("history.html", display_logs=all_logs)
 
 @app.route("/clear_history", methods=["POST"])
-def clear_history():
+def clear_history(): #function that allows us to clear/empty the history table but keeping its column 
     if session.get("role") != "admin": 
         return redirect("/login")
     db = get_db_conn()
     cursor = db.cursor()
     try:
         cursor.execute("""DELETE FROM history """)
-        cursor.execute("""DELETE FROM sqlite_sequence WHERE name='history'""")
+        cursor.execute("""DELETE FROM sqlite_sequence WHERE name='history'""") #this means to keep its columns
         db.commit()
     except Exception as e:
         print(f'Error clearing history table')
@@ -414,9 +415,8 @@ def clear_history():
     return redirect("/history")
 
 
-
 @app.route("/management")
-def management():
+def management(): #just fetch all teachers' data and display
     if session.get("role") != "admin": 
         return redirect("/login")
     db = get_db_conn()
@@ -428,11 +428,11 @@ def management():
     return render_template("management.html", all_accounts=all_accounts)
 
 @app.route("/manage_accounts", methods=["POST"])
-def manage_accounts():
+def manage_accounts(): #connects to a dropdown feature where action/changes can be made
     if session.get("role") != "admin": 
         return redirect("/login")
     
-    editor = session.get("user_id")
+    editor = session.get("user_id") #whoever is editing; for history 
     target_email = request.form.get("target_email") #know which account is being edited
     action = request.form.get("action") #know what action is being done to this account
     db = get_db_conn()
@@ -458,7 +458,7 @@ def manage_accounts():
     elif action == "reset": #resetting password 
         alphabet = string.ascii_letters + string.digits
         new_pass = ''.join(secrets.choice(alphabet) for i in range(8))
-        #the two lines above help create a random string that is 8 characters long
+        #the two lines above help create a random string that is 8 characters long, displayed in a pop up
         cursor.execute("""
             UPDATE teachers
             SET password = ? WHERE email = ?
@@ -466,11 +466,11 @@ def manage_accounts():
         log_history(db, editor, 'reset a password')
         db.commit()
         db.close()
-        return redirect(f"/management?new_password={new_pass}") 
+        return redirect(f"/management?new_password={new_pass}") #pass the new pw to html
         #first refresh to the page, the "?" starts a query string to send the data
 
     elif action == "set_teacher": 
-        #this case is when the action is to change role to 'teacher' or 'admin'
+        #these two cases are when the action is to change role to 'teacher' or 'admin'
         cursor.execute("""
             UPDATE teachers
             SET role = "teacher", is_active = 1 WHERE email = ?
@@ -484,7 +484,7 @@ def manage_accounts():
         log_history(db, editor, 'changed role to admin')
 
     if db: #could lead to errors since for 'remove' and 'reset' the db is alr closed, so we check here
-        db.commit()
+        db.commit() #if not alr closed, we commit and close
         db.close()
     return redirect("/management")
 
