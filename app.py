@@ -196,6 +196,22 @@ def answer_question():
     db.close()
     return redirect("/qa")
 
+@app.route("/delete_question", methods=["POST"])
+def delete_question():
+    if not can_edit():
+        return redirect("/login")
+        
+    question_id = request.form.get("question_id")
+    editor = session.get('user_id')
+    
+    db = get_db_conn()
+    cursor = db.cursor()
+    cursor.execute("DELETE FROM qa WHERE qa_id = ?", (question_id,))
+    log_history(db, editor, "deleted a question")
+    db.commit()
+    db.close()
+    return redirect("/qa")
+
 
 @app.route("/resources")
 def resources():
@@ -227,13 +243,17 @@ def update_clubs():
     new_descp = request.form.get("updated_club")
     new_img = request.form.get("new_img_link")    
     editor = session.get('user_id')
+    time = get_canada_time()
     db = get_db_conn()
     cursor = db.cursor()
     current = cursor.execute("SELECT club_name, image_path FROM clubs WHERE club_id = ?", (edited_id,)).fetchone()
     if not new_name and current: #just use the old name from db if not given a new name
         new_name = current["club_name"]
-    if not new_img and current: #if they leave it empty, it means they are not changing the image this time
-        new_img = current["image_path"]
+    if not new_img: 
+        if current and current["image_path"]:
+            new_img = current["image_path"] # Keep old image if it exists
+        else:
+            new_img = "" # Force empty string instead of None
     query = """
         UPDATE clubs
         SET club_name = ?, description = ?, image_path = ?, id = ?, updateDatetime = ? WHERE club_id = ?
@@ -244,6 +264,44 @@ def update_clubs():
     db.close()
     return redirect("/clubs")
 
+@app.route("/add_clubs", methods=["POST"])
+def add_clubs():
+    if not can_edit():
+        return redirect("/login")
+    club_name = request.form.get("club_name")
+    description = request.form.get("description")
+    img = request.form.get("img_link")
+    editor = session.get('user_id')
+    time = get_canada_time()
+    if not img or img=="None":
+        img = ""
+    db = get_db_conn()
+    cursor = db.cursor()
+    cursor.execute("""
+        INSERT INTO clubs (club_name, image_path, description, updateDatetime, id, page)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (club_name, img, description, time, editor, 'clubs'))
+    log_history(db, editor, "added new club")
+    db.commit()
+    db.close()
+    return redirect("/clubs")
+
+@app.route("/delete_club", methods=["POST"])
+def delete_club():
+    if not can_edit():
+        return redirect("/login")
+        
+    club_id = request.form.get("club_id")
+    club_name = request.form.get("club_name") # Sent for the history log
+    editor = session.get('user_id')
+    
+    db = get_db_conn()
+    cursor = db.cursor()
+    cursor.execute("""DELETE FROM clubs WHERE club_id = ?""", (club_id,))
+    log_history(db, editor, f"removed club: {club_name}")
+    db.commit()
+    db.close()
+    return redirect("/clubs")
 
 @app.route("/calendar")
 def calendar_view():
@@ -314,10 +372,10 @@ def update_calendar():
     except Exception as e:
         print(f"Error: {e}")
         if db:
-            db.rollback() # Undo changes if it failed
+            db.rollback() #undo changes if it failed
     finally:
         if db:
-            db.close() # THIS IS THE FIX: It closes no matter what
+            db.close() #closes no matter what
 
     return redirect(f"/calendar?month={date[5:7]}&year={date[0:4]}")
 
@@ -327,17 +385,42 @@ def history():
     if session.get("role") != "admin": #here we are ensuring that nobody other than admins are allowed to see this page
         return redirect("/login")
     db = get_db_conn()
+    db.row_factory = sqlite3.Row
     cursor = db.cursor()
-    all_logs = cursor.execute("""SELECT * FROM history ORDER BY updateDatetime DESC""").fetchall()
-    
+    query = """
+        SELECT teachers.email, history.updateDatetime, history.page FROM history
+        JOIN teachers ON history.id = teachers.id
+        ORDER BY history.updateDatetime DESC
+    """
+    #the JOIN is a sql command that allows connectin btw two tables that share the same column
+    all_logs = cursor.execute(query).fetchall()
     db.close()
     return render_template("history.html", display_logs=all_logs)
+
+@app.route("/clear_history", methods=["POST"])
+def clear_history():
+    if session.get("role") != "admin": 
+        return redirect("/login")
+    db = get_db_conn()
+    cursor = db.cursor()
+    try:
+        cursor.execute("""DELETE FROM history """)
+        cursor.execute("""DELETE FROM sqlite_sequence WHERE name='history'""")
+        db.commit()
+    except Exception as e:
+        print(f'Error clearing history table')
+    finally:
+        db.close()
+    return redirect("/history")
+
+
 
 @app.route("/management")
 def management():
     if session.get("role") != "admin": 
         return redirect("/login")
     db = get_db_conn()
+    db.row_factory = sqlite3.Row
     cursor = db.cursor()
     all_accounts = cursor.execute("""SELECT id, email, role, is_active FROM teachers ORDER BY id""").fetchall()
     
