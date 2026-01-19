@@ -4,25 +4,57 @@
 <div class="w-full max-w-none px-6 py-10 overflow-x-hidden">
     <div class="flex flex-col lg:flex-row gap-6 items-start">
 
-        <div
-            class="w-full lg:w-1/5 border-4 border-[#004a99] rounded-[3rem] p-10 bg-white shadow-lg min-h-[600px] flex flex-col">
-            <h3 id="panel-date" class="text-4xl font-bold mb-6 text-[#004a99] border-b-2 pb-2">Select Date</h3>
+        <div class="w-full max-w-none px-6 py-10 overflow-x-hidden">
+    <div class="flex flex-col lg:flex-row gap-6 items-start">
 
-            <div id="panel-content" class="flex-grow">
-                <p class="italic text-gray-400 text-2xl">• Click a day to see details</p>
+        <div class="w-full lg:w-1/5 flex flex-col gap-6">
+            
+            <div class="w-full border-4 border-[#004a99] rounded-[3rem] p-10 bg-white shadow-lg min-h-[600px] flex flex-col">
+                <h3 id="panel-date" class="text-4xl font-bold mb-6 text-[#004a99] border-b-2 pb-2">Select Date</h3>
+
+                <div id="panel-content" class="flex-grow">
+                    <p class="italic text-gray-400 text-2xl">• Click a day to see details</p>
+                </div>
+
+                {% if session.get('role') in ['admin', 'teacher'] %}
+                <form id="sidebar-auto-form" action="/update_calendar" method="POST" style="display:none;">
+                    <input type="hidden" name="eventdate" id="hid-date">
+                    <input type="hidden" name="notes" id="hid-notes"> 
+                    <input type="hidden" name="description" id="hid-desc">
+                    <input type="hidden" name="category" id="hid-cat">
+                </form>
+                <button id="save-btn" type="button" onclick="saveSidebar()"
+                    class="hidden w-full mt-4 bg-[#004a99] text-white font-bold py-2 rounded-xl hover:bg-[#5bc2f2]">
+                    Save Changes
+                </button>
+                {% endif %}
             </div>
 
-            {% if session.get('role') in ['admin', 'teacher'] %}
-            <form id="sidebar-auto-form" action="/update_calendar" method="POST" style="display:none;">
-                <input type="hidden" name="eventdate" id="hid-date">
-                <input type="hidden" name="notes" id="hid-notes"> <input type="hidden" name="description" id="hid-desc">
-                <input type="hidden" name="category" id="hid-cat">
-            </form>
-            <button id="save-btn" type="button" onclick="saveSidebar()"
-                class="hidden w-full mt-4 bg-[#004a99] text-white font-bold py-2 rounded-xl hover:bg-[#5bc2f2]">
-                Save Changes
-            </button>
-            {% endif %}
+            <div class="w-full border-4 border-[#004a99] rounded-[2.5rem] p-8 bg-white shadow-md">
+                <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6 text-center">Legend</h4>
+                
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-6 h-6 rounded-lg bg-[#456882]/70 border border-gray-200"></div>
+                        <span class="text-lg font-bold text-[#004a99]">Today</span>
+                    </div>
+                    
+                    <div class="flex items-center space-x-3">
+                        <div class="w-6 h-6 rounded-lg bg-[#5bc2f2]/50 border border-gray-200"></div>
+                        <span class="text-lg font-bold text-[#004a99]">Snow Day</span>
+                    </div>
+
+                    <div class="flex items-center space-x-3">
+                        <div class="w-6 h-6 rounded-lg bg-[#004aad]/30 border border-gray-200"></div>
+                        <span class="text-lg font-bold text-[#004a99]">Holiday</span>
+                    </div>
+
+                    <div class="flex items-center space-x-3">
+                        <div class="w-6 h-6 rounded-lg bg-[#F0EDCF] border border-gray-200"></div>
+                        <span class="text-lg font-bold text-[#004a99]">Special Event</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="flex-grow bg-white border-4 border-[#004a99] rounded-[3rem] p-8 shadow-xl">
@@ -52,13 +84,16 @@
                 <div class="h-32 p-4 border border-[#004a99] transition-all
         {{ 'bg-gray-100 opacity-20' if day == 0 else '' }}
         {% if is_today %}
-            bg-[#5bc2f2]/65 ring-4 ring-inset ring-[#5bc2f2]/40
+            bg-[#456882]/70 ring-4 ring-inset ring-[#dafaff]/40
         {% elif day_data and day_data[2] == 'holiday' %}
-        bg-[#dfc4ee]
+        bg-[#004aad]/30
         {% elif day_data and day_data[2] == 'snowday' %}
-            bg-[#AFEEEE]
+            bg-[#5bc2f2]/50
+        {% elif day_data and day_data[2] == 'special' %}
+        bg-[#F0EDCF]
         {% endif %}
-        hover:bg-blue-50 cursor-pointer" {% if day !=0 %}
+        hover:bg-blue-50 cursor-pointer" 
+        {% if day !=0 %}
                     onclick="updatePanel('{{ month_name }} {{ day }}', '{{ d_str }}')" {% endif %}>
 
                     {% if day != 0 %}
@@ -128,7 +163,8 @@
                 <select id="live-cat" class="w-full p-2 rounded-lg bg-gray-50 border border-transparent text-xs text-gray-700">
                     <option value="regular" ${day[2] === 'regular' ? 'selected' : ''}>Normal</option>
                     <option value="holiday" ${day[2] === 'holiday' ? 'selected' : ''}>Holiday (Purple)</option>
-                    <option value="snowday" ${day[2] === 'snowday' ? 'selected' : ''}>Snow Day (Turquoise)</option>
+                    <option value="snowday" ${day[2] === 'snowday' ? 'selected' : ''}>Snow Day (Blue)</option>
+                    <option value="special" ${day[2] === 'special' ? 'selected' : ''}>Special Event (Yellow)</option>
                 </select>
             </div>
         </div>`;

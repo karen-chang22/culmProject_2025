@@ -34,10 +34,10 @@
     </div>
 
     <div class="grid grid-cols-2 gap-4 mb-4">
-        <div class="bg-[#7dd3fc] py-4 rounded-lg text-center font-bold text-xl text-[#004a99] shadow-sm">
+        <div class="bg-[#c1c3f6] py-4 rounded-lg text-center font-bold text-xl text-[#004a99] shadow-sm">
             Email/Username
         </div>
-        <div class="bg-[#7dd3fc] py-4 rounded-lg text-center font-bold text-xl text-[#004a99] shadow-sm">
+        <div class="bg-[#c1c3f6] py-4 rounded-lg text-center font-bold text-xl text-[#004a99] shadow-sm">
             Access/Reset Password
         </div>
     </div>
@@ -45,11 +45,11 @@
     <div class="space-y-3">
         {% for account in all_accounts %}
         <div class="grid grid-cols-2 gap-4">
-            <div class="bg-[#e0f2fe] py-4 rounded-lg text-center font-semibold text-lg text-[#0369a1] shadow-sm flex items-center justify-center">
+            <div class="bg-[#e9e9ff] py-4 rounded-lg text-center font-semibold text-lg text-[#0369a1] shadow-sm flex items-center justify-center">
                 {{ account['email'] }}
             </div>
 
-            <div class="relative group bg-[#e0f2fe] rounded-lg shadow-sm">
+            <div class="relative group bg-[#e9e9ff] rounded-lg shadow-sm">
                 <div class="py-4 px-6 flex justify-between items-center cursor-pointer">
                     <span class="font-semibold text-lg text-[#0369a1]">
                         {% if account['is_active'] == 0 %}Disabled{% else %}{{ account['role']|capitalize }}{% endif %}

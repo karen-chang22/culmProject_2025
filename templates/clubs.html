@@ -2,8 +2,18 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-10">
-    <div class="mb-12 border-b-4 border-[#5bc2f2] inline-block pb-2">
-        <h2 class="text-4xl font-bold text-[#004a99]">Clubs</h2>
+    <div class="flex justify-between items-end mb-12">
+        <div>
+            <h2 class="text-4xl font-bold text-[#004a99]">Clubs</h2>
+            <div class="h-1 w-32 bg-[#5bc2f2] mt-2"></div>
+        </div>
+
+        {% if session.get('role') in ['admin', 'teacher'] %}
+        <button onclick="document.getElementById('addClubModal').classList.remove('hidden')"
+            class="bg-green-500 hover:bg-green-600 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110">
+            <i class="fa fa-plus text-2xl"></i>
+        </button>
+        {% endif %}
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
@@ -12,7 +22,7 @@
             class="border-4 border-[#004a99] rounded-[2.5rem] bg-white shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow">
 
             <div class="h-52 overflow-hidden border-b-4 border-[#004a99]">
-                {% if club[2] %}
+                {% if club[2] and club[2] != "" %}
                 <img src="{{ club[2] }}" class="w-full h-full object-cover" alt="{{ club[0] }}">
                 {% else %}
                 <div class="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">
@@ -35,8 +45,7 @@
                         <label class="block text-[10px] font-bold text-[#004a99] mb-1 uppercase tracking-widest">Club
                             Name</label>
                         <input type="text" name="updated_name" value="{{ club[0] }}"
-                            class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm font-bold text-[#004a99] focus:border-[#5bc2f2] outline-none"
-                            placeholder="Club Name">
+                            class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm font-bold text-[#004a99] focus:border-[#5bc2f2] outline-none">
                     </div>
 
                     <div class="text-left">
@@ -47,19 +56,59 @@
                             rows="3">{{ club[1] }}</textarea>
                     </div>
 
-                    <input type="text" name="new_img_link"
-                        class="w-full p-2 border-2 border-gray-200 rounded-lg text-xs"
-                        placeholder="New Image URL (optional)">
+                    <div class="text-left">
+                        <label class="block text-[10px] font-bold text-[#004a99] mb-1 uppercase tracking-widest">Image
+                            URL</label>
+                        <input type="text" name="new_img_link" value="{{ club[2] }}"
+                            class="w-full p-2 border-2 border-gray-200 rounded-lg text-xs outline-none focus:border-[#5bc2f2]"
+                            placeholder="Optional Image URL">
+                    </div>
 
                     <button type="submit"
                         class="w-full bg-[#004a99] text-white py-2 rounded-full font-bold hover:bg-[#5bc2f2] transition-colors shadow-md">
                         Update Club
                     </button>
                 </form>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <form action="/delete_club" method="POST"
+                        onsubmit="return confirm('Are you sure you want to PERMANENTLY delete this club?')">
+                        <input type="hidden" name="club_id" value="{{ club[3] }}">
+                        <input type="hidden" name="club_name" value="{{ club[0] }}">
+
+                        <button type="submit"
+                            class="w-full bg-red-50 text-red-600 py-2 rounded-full font-black hover:bg-red-100 transition-colors border-2 border-red-100">
+                            <i class="fa fa-trash-alt mr-2"></i> DELETE CLUB
+                        </button>
+                    </form>
+                </div>
             </div>
             {% endif %}
         </div>
         {% endfor %}
+    </div>
+</div>
+
+<div id="addClubModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+    <div class="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl">
+        <h3 class="text-2xl font-bold text-[#004a99] mb-6">Create New Club</h3>
+
+        <form action="/add_clubs" method="POST" class="space-y-4">
+            <input type="text" name="club_name" placeholder="Club Name" required
+                class="w-full p-3 border-2 border-gray-100 rounded-xl outline-none focus:border-[#5bc2f2]">
+
+            <input type="text" name="img_link" placeholder="Image URL (Optional)"
+                class="w-full p-3 border-2 border-gray-100 rounded-xl outline-none focus:border-[#5bc2f2]">
+
+            <textarea name="description" placeholder="Description" required rows="3"
+                class="w-full p-3 border-2 border-gray-100 rounded-xl outline-none focus:border-[#5bc2f2]"></textarea>
+
+            <div class="flex space-x-3 pt-4">
+                <button type="button" onclick="document.getElementById('addClubModal').classList.add('hidden')"
+                    class="flex-1 py-3 bg-gray-100 rounded-xl font-bold">Cancel</button>
+                <button type="submit" class="flex-1 py-3 bg-[#004a99] text-white rounded-xl font-bold">Create
+                    Club</button>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}

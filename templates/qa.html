@@ -69,6 +69,17 @@
                                     Answer</button>
                             </div>
                         </form>
+                        <div class="mt-2">
+                                <form action="/delete_question" method="POST"
+                                    onsubmit="return confirm('Are you sure you want to delete this question?')">
+                                    <input type="hidden" name="question_id" value="{{ q[0] }}">
+
+                                    <button type="submit"
+                                        class="text-red-500 hover:text-red-700 transition-colors flex items-center gap-1 text-sm font-bold">
+                                        <i class="fa fa-trash-alt"></i> Delete Question
+                                    </button>
+                                </form>
+                        </div>
                     </div>
                     {% endif %}
                 </div>
